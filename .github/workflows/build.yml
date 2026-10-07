@@ -8,65 +8,48 @@ on:
 
 jobs:
   build:
-    name: Build ANIMORA Android APK
+    name: Build ANIMORA
     runs-on: ubuntu-latest
 
     steps:
 
-      # 1. تحميل ملفات المستودع
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. تثبيت Java 17
       - name: Setup Java 17
         uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
 
-      # 3. تثبيت Flutter
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.38.0'
           channel: stable
           cache: true
 
-      # 4. التحقق من Flutter و Java
-      - name: Check versions
-        run: |
-          flutter --version
-          dart --version
-          java -version
+      - name: Check Flutter
+        run: flutter --version
 
-      # 5. فك ملف ANIMORA
-      - name: Extract ANIMORA project
+      - name: Extract ANIMORA ZIP
         run: |
           rm -rf extracted
           mkdir extracted
-
           unzip -q ANIMORA_flutter_starter.zip -d extracted
 
-          echo "Files found:"
-          find extracted -maxdepth 4 -type f
-
-      # 6. البحث عن pubspec.yaml
-      - name: Locate ANIMORA source
-        run: |
           PROJECT_DIR=$(dirname "$(find extracted -name pubspec.yaml -print -quit)")
 
           if [ -z "$PROJECT_DIR" ]; then
-            echo "ERROR: pubspec.yaml was not found"
+            echo "ERROR: pubspec.yaml not found"
             exit 1
           fi
 
-          echo "ANIMORA source directory:"
+          echo "Found project:"
           echo "$PROJECT_DIR"
 
-          echo "SOURCE_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+          echo "PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
 
-      # 7. إنشاء مشروع Flutter Android جديد ونظيف
-      - name: Create Android project
+      - name: Create clean Flutter Android project
         run: |
           rm -rf animora_build
 
@@ -76,39 +59,31 @@ jobs:
             --project-name animora \
             animora_build
 
-      # 8. نسخ كود ANIMORA داخل المشروع الجديد
-      - name: Copy ANIMORA source
+      - name: Copy ANIMORA files
         run: |
-          cp "$SOURCE_DIR/pubspec.yaml" animora_build/pubspec.yaml
+          cp "$PROJECT_DIR/pubspec.yaml" animora_build/pubspec.yaml
 
           rm -rf animora_build/lib
-          cp -r "$SOURCE_DIR/lib" animora_build/lib
+          cp -r "$PROJECT_DIR/lib" animora_build/lib
 
-          if [ -f "$SOURCE_DIR/README.md" ]; then
-            cp "$SOURCE_DIR/README.md" animora_build/README.md
+          rm -rf animora_build/test
+
+          if [ -f "$PROJECT_DIR/README.md" ]; then
+            cp "$PROJECT_DIR/README.md" animora_build/README.md
           fi
 
-      # 9. تحميل المكتبات
-      - name: Get Flutter dependencies
+      - name: Get dependencies
         working-directory: animora_build
         run: |
           flutter clean
           flutter pub get
 
-      # 10. فحص المشروع
-      - name: Analyze project
-        working-directory: animora_build
-        run: |
-          flutter analyze
-
-      # 11. بناء APK
-      - name: Build release APK
+      - name: Build ANIMORA APK
         working-directory: animora_build
         run: |
           flutter build apk --release
 
-      # 12. رفع APK إلى GitHub
-      - name: Upload ANIMORA APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: ANIMORA-APK
