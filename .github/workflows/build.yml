@@ -17,7 +17,8 @@ jobs:
       - name: Extract project
         run: |
           unzip -q ANIMORA_flutter_starter.zip -d extracted
-          cp -r extracted/ANIMORA_flutter_starter/. .
+          PROJECT_DIR=$(dirname "$(find extracted -name pubspec.yaml -print -quit)")
+          cp -r "$PROJECT_DIR"/. .
 
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
